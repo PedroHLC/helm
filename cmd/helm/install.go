@@ -153,6 +153,7 @@ func newInstallCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 }
 
 func addInstallFlags(cmd *cobra.Command, f *pflag.FlagSet, client *action.Install, valueOpts *values.Options) {
+	f.BoolVar(&client.Adopt, "adopt", false, "if set, adopt the resources already exist and aren't owned by any other releases.")
 	f.BoolVar(&client.CreateNamespace, "create-namespace", false, "create the release namespace if not present")
 	f.BoolVar(&client.DryRun, "dry-run", false, "simulate an install")
 	f.BoolVar(&client.Force, "force", false, "force resource updates through a replacement strategy")

@@ -97,6 +97,8 @@ type Upgrade struct {
 	// If this is non-nil, then after templates are rendered, they will be sent to the
 	// post renderer before sending to the Kubernetes API server.
 	PostRenderer postrender.PostRenderer
+	// Adopt, if true, adopt the resources already exist and aren't owned by any other releases.
+	Adopt bool
 	// DisableOpenAPIValidation controls whether OpenAPI validation is enforced.
 	DisableOpenAPIValidation bool
 	// Get missing dependencies
@@ -296,7 +298,7 @@ func (u *Upgrade) performUpgrade(ctx context.Context, originalRelease, upgradedR
 		}
 	}
 
-	toBeUpdated, err := existingResourceConflict(toBeCreated, upgradedRelease.Name, upgradedRelease.Namespace)
+	toBeUpdated, err := existingResourceConflict(toBeCreated, upgradedRelease.Name, upgradedRelease.Namespace, u.Adopt)
 	if err != nil {
 		return nil, errors.Wrap(err, "rendered manifests contain a resource that already exists. Unable to continue with update")
 	}
@@ -317,6 +319,12 @@ func (u *Upgrade) performUpgrade(ctx context.Context, originalRelease, upgradedR
 			upgradedRelease.Info.Description = "Dry run complete"
 		}
 		return upgradedRelease, nil
+	}
+
+	if u.Adopt {
+		if err := adoptExistingResource(toBeUpdated, upgradedRelease.Name, upgradedRelease.Namespace); err != nil {
+			return nil, err
+		}
 	}
 
 	u.cfg.Log("creating upgraded release for %s", upgradedRelease.Name)

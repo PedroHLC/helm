@@ -70,6 +70,7 @@ type Install struct {
 
 	ClientOnly               bool
 	Force                    bool
+	Adopt                    bool
 	CreateNamespace          bool
 	DryRun                   bool
 	DisableHooks             bool
@@ -291,7 +292,7 @@ func (i *Install) RunWithContext(ctx context.Context, chrt *chart.Chart, vals ma
 	// deleting the release because the manifest will be pointing at that
 	// resource
 	if !i.ClientOnly && !isUpgrade && len(resources) > 0 {
-		toBeAdopted, err = existingResourceConflict(resources, rel.Name, rel.Namespace)
+		toBeAdopted, err = existingResourceConflict(resources, rel.Name, rel.Namespace, i.Adopt)
 		if err != nil {
 			return nil, errors.Wrap(err, "rendered manifests contain a resource that already exists. Unable to continue with install")
 		}
@@ -301,6 +302,12 @@ func (i *Install) RunWithContext(ctx context.Context, chrt *chart.Chart, vals ma
 	if i.DryRun {
 		rel.Info.Description = "Dry run complete"
 		return rel, nil
+	}
+
+	if i.Adopt {
+		if err := adoptExistingResource(toBeAdopted, rel.Name, rel.Namespace); err != nil {
+			return nil, err
+		}
 	}
 
 	if i.CreateNamespace {
